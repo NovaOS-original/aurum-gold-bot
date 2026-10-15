@@ -1,0 +1,3 @@
+# Security policy
+
+This project is research-only and does not place orders. Never commit broker credentials, access tokens, account IDs, or private account data. Use demo accounts during development. Do not publish private trading reports to GitHub Pages. Before execution is added, require authenticated control endpoints, idempotent orders, stale-data and spread checks, loss/position caps, verified broker-side stop-loss/take-profit, reconnect handling and an emergency stop. No live trading should be enabled by default.
