@@ -2,44 +2,43 @@
 
 **Status: research and paper signals only. No order placement is implemented. No win rate or profitability is promised.**
 
-## What is included
-- EMA(9)/EMA(21) crossover with RSI confirmation.
-- ATR-based exits and a chronological holdout backtest with spread, slippage and commission modelling.
+## Included
+- EMA(9)/EMA(21) crossover with RSI(14) confirmation.
+- ATR-based assumptions in a chronological holdout backtest.
+- Spread, slippage and commission assumptions; net P&L, return and drawdown reporting.
 - Read-only MT5 candle export for a locally running Windows terminal.
-- Responsive static dashboard for phone, tablet and desktop browsers.
-- GitHub Actions test workflow and GitHub Pages deployment workflow.
+- Responsive dashboard for phones, tablets and desktop browsers.
+- GitHub Actions CI and GitHub Pages deployment workflow.
 
-The included CSV is synthetic software-test data, not gold market data. Do not use its results to infer trading profitability.
+The candles used in automated tests are synthetic software fixtures, not real gold prices. Never infer profitability from them.
 
-## Local setup (Python 3.11+)
+## Install (Python 3.11+)
 ```powershell
 py -m venv .venv
-.venv\\Scripts\\Activate.ps1
+.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
 $env:PYTHONPATH = "src"
 python -m unittest discover -s tests -v
 ```
 
-## MT5 read-only export
-Run on Windows with MT5 installed and connected to a demo account:
+## Export closed MT5 candles (Windows)
+Install MetaTrader 5 desktop and connect to a demo account:
 ```powershell
 python -m pip install MetaTrader5
 $env:PYTHONPATH = "src"
 python -m aurum_bot.mt5_export --symbol XAUUSD --timeframe M5 --bars 20000 --output data/xauusd_mt5.csv
 ```
-Confirm your broker's exact gold symbol in Market Watch. This command only exports candles; it never submits orders.
+Confirm the exact gold symbol in Market Watch; some brokers use a suffix or `GOLD`. This exports closed candles only and does not submit orders.
 
-## Backtest real data
+## Run holdout research
 ```powershell
 $env:PYTHONPATH = "src"
 python -m aurum_bot.research --input data/xauusd_mt5.csv --output reports/backtest.json --test-fraction 0.25 --spread 0.30 --slippage 0.05 --commission-per-lot 0 --starting-balance 1000
 ```
-Use observed broker costs and verify contract size, tick value, lot step, account currency and margin rules. Never tune on the holdout and then call it out-of-sample.
+The last chronological fraction is held out for evaluation; parameters are not tuned by the script. This is an approximate bar-based model, not a forecast. Its sizing is illustrative and **not broker-lot sizing**. Before interpreting results, validate contract size, tick size/value, lot minimum/step, margin, account currency and actual commission units. If stop and target are both inside a candle, the model assumes the stop was hit first.
 
-## Cross-platform dashboard and hosting
-`site/index.html` is a responsive static dashboard. GitHub Pages can serve it to modern mobile and desktop browsers. See [PLATFORM_ARCHITECTURE.md](PLATFORM_ARCHITECTURE.md). GitHub Actions is not a persistent low-latency trading server. For future MT5 demo execution, use an always-on Windows VPS running MT5 or a supported official broker API host, plus an authenticated backend. Keep secrets out of source and browser code.
+## Hosting
+`site/index.html` is a responsive static dashboard. In repository Settings → Pages, choose GitHub Actions as the deployment source. GitHub Actions is not a persistent low-latency trading server. Future MT5 demo execution requires an always-on compatible host and an authenticated backend. Never put broker credentials in browser code, Pages or the repository.
 
-## Strategy hypothesis
-Long: EMA(9) crosses above EMA(21), RSI(14) >= 52. Short: EMA(9) crosses below EMA(21), RSI(14) <= 48. Entry is next bar open; stop 1.2 ATR, target 1.5 ATR, timeout 12 bars. These are hypotheses, not a proven edge.
-
-Before adding demo execution, implement and test idempotency, stale-data and max-spread guards, daily loss/position caps, broker-side SL/TP verification, reconnect handling and an emergency stop. Live trading must remain disabled by default.
+## Safety
+No order adapter is present. Keep development demo-first. Before any execution is developed, add idempotency, stale-data rejection, a max-spread guard, daily loss/position caps, broker-side SL/TP verification, reconnect handling, authenticated controls and an emergency stop. Live trading must remain disabled by default.
