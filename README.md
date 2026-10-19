@@ -6,12 +6,11 @@
 - EMA(9)/EMA(21) crossover with RSI(14) confirmation.
 - ATR-based assumptions in a chronological holdout backtest.
 - Spread, slippage and commission assumptions; net P&L, return and drawdown reporting.
+- Built-in history setup: fetch daily XAU/USD history when online, or generate a labelled offline test fixture.
 - Read-only MT5 candle export for a locally running Windows terminal.
 - Reusable fail-closed market-data validators for stale/malformed candles and excessive/crossed quotes.
 - Responsive dashboard for phones, tablets and desktop browsers.
 - GitHub Actions CI and GitHub Pages deployment workflow.
-
-The candles used in automated tests are synthetic software fixtures, not real gold prices. Never infer profitability from them.
 
 ## Install (Python 3.11+)
 ```powershell
@@ -22,6 +21,30 @@ $env:PYTHONPATH = "src"
 python -m unittest discover -s tests -v
 ```
 
+## Built-in market history for demo/testing (new)
+You no longer need to locate and manually provide a CSV to try the research pipeline.
+
+```powershell
+$env:PYTHONPATH = "src"
+python -m aurum_bot.demo_history
+```
+
+By default, this attempts to download up to five years of **daily historical XAU/USD** from Yahoo Finance and writes:
+- `data/demo_xauusd.csv` — normalized OHLCV candles
+- `data/demo_xauusd.meta.json` — data source, row count, date range and warnings
+
+Choose a period and output path:
+```powershell
+python -m aurum_bot.demo_history --source yahoo --period 5y --output data/demo_xauusd.csv
+```
+
+For an offline software-only test fixture:
+```powershell
+python -m aurum_bot.demo_history --source sample --rows 1200
+```
+
+**Important:** the offline fixture is synthetic, not real market history, and must not be used to assess strategy profitability. In default `auto` mode, if the online download fails, the script falls back to that synthetic fixture and records this clearly in the metadata file. Check `source` in the metadata before every backtest. Yahoo daily candles may differ from your broker's XAUUSD feed and do not substitute for M1/M5 scalping validation. For broker-specific intraday testing, use the MT5 export below.
+
 ## Export closed MT5 candles (Windows)
 Install MetaTrader 5 desktop and connect to a demo account:
 ```powershell
@@ -31,7 +54,7 @@ python -m aurum_bot.mt5_export --symbol XAUUSD --timeframe M5 --bars 20000 --out
 ```
 Confirm the exact gold symbol in Market Watch; some brokers use a suffix or `GOLD`. This exports closed candles only and does not submit orders.
 
-## Market-data guardrails (new)
+## Market-data guardrails
 The reusable checks are in `src/aurum_bot/feed_guard.py`. They reject stale or future-dated candles, timezone-naive timestamps, invalid/inconsistent OHLC values, invalid/crossed quotes, and spreads above a configured price-unit limit. Example:
 ```python
 from aurum_bot.feed_guard import validate_candle, validate_spread
@@ -47,7 +70,7 @@ if not candle_check.ok or not quote_check.ok:
 ## Run holdout research
 ```powershell
 $env:PYTHONPATH = "src"
-python -m aurum_bot.research --input data/xauusd_mt5.csv --output reports/backtest.json --test-fraction 0.25 --spread 0.30 --slippage 0.05 --commission-per-lot 0 --starting-balance 1000
+python -m aurum_bot.research --input data/demo_xauusd.csv --output reports/backtest.json --test-fraction 0.25 --spread 0.30 --slippage 0.05 --commission-per-lot 0 --starting-balance 1000
 ```
 The last chronological fraction is held out for evaluation; parameters are not tuned by the script. This is an approximate bar-based model, not a forecast. Its sizing is illustrative and **not broker-lot sizing**. Before interpreting results, validate contract size, tick size/value, lot minimum/step, margin, account currency and actual commission units. If stop and target are both inside a candle, the model assumes the stop was hit first.
 
@@ -55,4 +78,4 @@ The last chronological fraction is held out for evaluation; parameters are not t
 `site/index.html` is a responsive static dashboard. In repository Settings → Pages, choose GitHub Actions as the deployment source. GitHub Actions is not a persistent low-latency trading server. A future MT5 demo feed needs an always-on Windows host and an authenticated backend. Never put broker credentials in browser code, Pages or the repository.
 
 ## Safety
-No order adapter is present. Keep development demo-first. Before any execution is developed, add idempotency, enforced stale-data and max-spread checks, daily loss/position caps, broker-side SL/TP verification, reconnect handling, authenticated controls and an emergency stop. Live trading must remain disabled by default.
+No order adapter is present. Keep development demo-first. Synthetic fixtures are for software tests only. Before interpreting results, use real broker-exported candles and realistic spread, slippage, commission, and untouched out-of-sample periods. Live trading must remain disabled by default.
