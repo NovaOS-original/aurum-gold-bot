@@ -67,6 +67,12 @@ if not candle_check.ok or not quote_check.ok:
 ```
 **Integration boundary:** these are tested utility functions, not yet wired into a continuously running MT5-to-dashboard service. The current exporter remains a one-shot CSV export. Do not treat the dashboard as a live feed until an authenticated bridge calls these checks and exposes health/last-update status.
 
+## Dashboard: select and run built-in history
+
+On the GitHub Pages dashboard, open **Backtest data**, choose **Last 1 year**, **Last 2 years**, or **Last 5 years**, then tap **Load built-in history** and **Run historical backtest**. The dashboard requests real daily XAU/USD candles from Yahoo Finance in the browser; internet access and the provider allowing browser requests are required. If the provider blocks the request, use the Python command below on Windows to download the data, or upload a broker-exported CSV. The separate **Load synthetic test fixture** option is only for checking that the UI/backtest runs and is not real market history.
+
+Daily Yahoo candles are not appropriate for evaluating a scalping strategy. Use MT5-exported M1/M5 demo-account candles with realistic spread, slippage and commission assumptions for that purpose. No orders are sent.
+
 ## One-command built-in historical candle backtest (new)
 
 Run the full pipeline without manually creating a CSV (requires internet for Yahoo Finance):
