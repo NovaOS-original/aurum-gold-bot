@@ -67,6 +67,31 @@ if not candle_check.ok or not quote_check.ok:
 ```
 **Integration boundary:** these are tested utility functions, not yet wired into a continuously running MT5-to-dashboard service. The current exporter remains a one-shot CSV export. Do not treat the dashboard as a live feed until an authenticated bridge calls these checks and exposes health/last-update status.
 
+## One-command built-in historical candle backtest (new)
+
+Run the full pipeline without manually creating a CSV (requires internet for Yahoo Finance):
+
+```powershell
+$env:PYTHONPATH = "src"
+python -m aurum_bot.run_backtest --source yahoo --period 5y --output reports/backtest.json
+```
+
+The command downloads daily XAU/USD candles, validates OHLC data, runs the chronological holdout backtest, and writes a JSON report with trade count, win rate (when trades exist), net P/L, return, maximum drawdown, assumptions, date range, and data-source warnings. It defaults to **real Yahoo daily history** and fails rather than silently substituting synthetic candles if that download fails.
+
+For broker-specific intraday candles (recommended for scalping), export closed M1 or M5 candles from the MT5 demo terminal, then run:
+
+```powershell
+python -m aurum_bot.run_backtest --source csv --input data/xauusd_mt5.csv --output reports/mt5_m5_backtest.json --spread 0.30 --slippage 0.05 --commission-per-lot 0
+```
+
+For software tests only, synthetic fixture mode is explicit:
+
+```powershell
+python -m aurum_bot.run_backtest --source sample --rows 1200 --output reports/synthetic_test.json
+```
+
+**Never interpret synthetic-fixture results as trading performance.** Yahoo daily candles are not appropriate to validate scalping. Check broker-specific symbol, timeframe, spread, slippage, commission units, contract size, tick value, and account currency before interpreting any report. No orders are sent.
+
 ## Run holdout research
 ```powershell
 $env:PYTHONPATH = "src"
