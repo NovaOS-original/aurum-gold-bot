@@ -73,7 +73,7 @@ The public GitHub Pages dashboard is **NanaForex Gold Tester**. Choose a history
 
 After history loads, configure the EMA/RSI strategy and costs, then select **Run strategy backtest**. The final chronological holdout is scored; earlier candles are used only to warm up indicators. Results include net P/L, win rate, closed trades, profit factor, drawdown, ending balance, average trade, equity curve, trade log and indicator values. Candles can be exported as CSV.
 
-The chart is an original NanaForex canvas renderer with candle/line views, indicator overlays, crosshair values, wheel zoom and drag-to-pan. It does not load TradingView Lightweight Charts or display TradingView branding. The source attribution for XAUS market data remains visible.
+The chart is an original NanaForex canvas renderer with candle/line views, indicator overlays, crosshair values, wheel zoom and drag-to-pan. It does not load TradingView Lightweight Charts or display TradingView branding. The source attribution for XAUS market data remains visible. The **Market Replay** panel reveals historical candles progressively with play, pause, step, restart, speed and forward-scrub controls. Place a simulated BUY/SELL setup with entry, SL and TP levels; the replay monitors subsequent candles and marks pending entry, filled entry, TP or SL. When both TP and SL are inside one candle, SL is assumed first. Replay outcomes are price movement only, not broker-calculated cash P/L. A backtest restores the full dataset before running, and CSV export always includes all loaded candles.
 
 For realistic scalping research, use broker-exported M1/M5 demo-account candles where possible. Public-provider candles may differ from your broker's symbol, timezone, spread and execution. No orders are sent.
 
