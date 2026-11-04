@@ -115,8 +115,24 @@ function refreshOverlays(){
  rsiSeries.setData($('rsiToggle').checked?r.map((x,i)=>({time:candles[i].time,value:x?.value??NaN})):[]);
  if(candles.length){let c=candles[candles.length-1];$('lastPrice').textContent=fmt(c.close);$('ohlc').textContent='O '+fmt(c.open)+' · H '+fmt(c.high)+' · L '+fmt(c.low)+' · C '+fmt(c.close);}
 }
+async function fetchMarketData(url,timeoutMs=20000){
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeoutMs);
+ try{return await fetch(url,{headers:{Accept:'application/json'},cache:'no-store',signal:controller.signal});}
+ finally{clearTimeout(timer);}
+}
+async function parseMarketResponse(response,provider){
+ let payload;try{payload=await response.json();}catch{throw Error(provider+' returned an unreadable response (HTTP '+response.status+').');}
+ if(!response.ok)throw Error(provider+' HTTP '+response.status+': '+(payload.error||payload.detail||payload.message||'market history unavailable'));
+ return payload;
+}
 async function loadHistory(){
- const period=$('period').value,interval=$('interval').value;
+ let period=$('period').value;const interval=$('interval').value;
+ const order={'1mo':1,'3mo':2,'6mo':3,'1y':4,'2y':5,'5y':6};
+ const maxRange=interval==='1m'?'1mo':['5m','15m','30m','1h'].includes(interval)?'1y':'5y';
+ if((order[period]||0)>(order[maxRange]||0)){
+  period=maxRange;$('period').value=period;
+  $('dataLabel').textContent='Adjusted history range to '+period+' because '+interval+' candles have provider history limits.';
+ }
  stopReplay();replaySource=[];replayTrade=null;replayMode=false;if($('replayStatus'))$('replayStatus').textContent='Loading a new historical dataset…';['replayPlay','replayPause','replayStep','replayReset','placeSetup','cancelSetup','useReplayPrice','replayProgress'].forEach(id=>$(id).disabled=true);
  candles=[];lastResult=null;$('run').disabled=true;$('datasetInfo').textContent='No candles loaded';$('lastPrice').textContent='—';$('ohlc').textContent='Open — · High — · Low — · Close —';$('indicatorRows').innerHTML='';$('tradeRows').innerHTML='<tr><td colspan="7" class="muted">Load history, then run a backtest.</td></tr>';$('net').textContent='—';$('win').textContent='—';$('trades').textContent='—';$('pf').textContent='—';$('dd').textContent='—';$('endBal').textContent='—';$('avg').textContent='—';$('testBars').textContent='—';
  if(candleSeries){candleSeries.priceLines=[];candleSeries.setMarkers([]);candleSeries.setData([]);}if(lineSeries)lineSeries.setData([]);if(equitySeries)equitySeries.setData([]);refreshOverlays();
@@ -127,9 +143,8 @@ async function loadHistory(){
   const xaUrl='https://xaus.com/api/v1/chart?symbol=xau&range='+encodeURIComponent(period)+'&interval='+encodeURIComponent(xaInterval);
   let xaError=null;
   try{
-   const res=await fetch(xaUrl,{headers:{Accept:'application/json'},cache:'no-store'});
-   if(!res.ok)throw Error('XAUS API returned HTTP '+res.status);
-   const raw=await res.json();
+   const res=await fetchMarketData(xaUrl);
+   const raw=await parseMarketResponse(res,'XAUS Gold Data API');
    const pts=raw.points||raw.candles||raw.data||raw.results||[];
    const normalized=pts.map(p=>({
     time:Math.floor(Number(p.t??p.time??p.timestamp??(p.date?Date.parse(p.date)/1000:NaN))),
@@ -140,11 +155,10 @@ async function loadHistory(){
   }catch(err){xaError=err;}
   if(!j&&API_BASE){
    provider='NanaForex API (Yahoo Finance fallback)';
-   const res=await fetch(API_BASE+'/api/candles?symbol=XAUUSD&interval='+encodeURIComponent(interval)+'&range='+encodeURIComponent(period),{headers:{Accept:'application/json'},cache:'no-store'});
-   if(!res.ok){let x=await res.json().catch(()=>({}));throw Error('XAUS: '+(xaError?.message||'unavailable')+'; fallback: '+(x.detail||res.status));}
-   j=await res.json();
+   const res=await fetchMarketData(API_BASE+'/api/candles?symbol=XAUUSD&interval='+encodeURIComponent(interval)+'&range='+encodeURIComponent(period));
+   try{j=await parseMarketResponse(res,'NanaForex fallback API');}catch(fallbackError){throw Error('XAUS: '+(xaError?.message||'unavailable')+'; fallback: '+fallbackError.message);}
   }
-  if(!j)throw Error('Free XAUS history service could not return enough real candles. '+(xaError?.message||'Unknown provider error')+'. Try another timeframe or history range.');
+  if(!j)throw Error('Free XAUS history service could not return enough real candles. '+(xaError?.message||'Unknown provider error')+'. The request may have timed out, the provider may be rate-limiting, or this timeframe/range may not be available. Try a shorter range or another timeframe.');
   candles=(j.candles||[]).filter(c=>Number.isFinite(Number(c.time))&&Number.isFinite(Number(c.open))&&Number.isFinite(Number(c.high))&&Number.isFinite(Number(c.low))&&Number.isFinite(Number(c.close))&&Number(c.open)>0&&Number(c.high)>=Math.max(Number(c.open),Number(c.close),Number(c.low))&&Number(c.low)<=Math.min(Number(c.open),Number(c.close),Number(c.high))).map(c=>({...c,time:Number(c.time),open:Number(c.open),high:Number(c.high),low:Number(c.low),close:Number(c.close),volume:Number(c.volume)||0})).sort((a,b)=>a.time-b.time).filter((c,i,a)=>i===0||c.time>a[i-1].time);
   if(candles.length<2)throw Error('Provider returned fewer than 2 valid candles. Try another range or timeframe.');
   candleSeries.setData(candles);lineSeries.setData(candles.map(c=>({time:c.time,value:c.close})));refreshOverlays();chart.timeScale().fitContent();rsiChart.timeScale().setVisibleLogicalRange({from:Math.max(0,candles.length-180),to:candles.length-1});
