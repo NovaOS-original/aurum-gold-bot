@@ -24,7 +24,7 @@ class FrontendContractTests(unittest.TestCase):
                       "function runBacktest", "function exportCSV"):
             self.assertIn(token, self.script)
         for element_id in ("mainChart", "rsiChart", "equityChart", "load", "run",
-                           "tradeRows", "indicatorRows", "export", "ema9", "ema21", "bb", "rsiToggle"):
+                           "tradeRows", "indicatorRows", "sourceLabel", "export", "ema9", "ema21", "bb", "rsiToggle"):
             self.assertIn(f'id="{element_id}"', self.html)
 
     def test_real_market_provider_is_explicit_and_no_fake_fallback(self):
