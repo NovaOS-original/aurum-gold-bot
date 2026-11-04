@@ -110,3 +110,34 @@ The last chronological fraction is held out for evaluation; parameters are not t
 
 ## Safety
 No order adapter is present. Keep development demo-first. Synthetic fixtures are for software tests only. Before interpreting results, use real broker-exported candles and realistic spread, slippage, commission, and untouched out-of-sample periods. Live trading must remain disabled by default.
+
+
+## NanaForex Gold Tester (public historical strategy lab)
+
+The GitHub Pages front end is now branded **NanaForex Gold Tester**. It is designed for public use without sign-in and provides historical XAUUSD candles, candlestick/line charts, EMA 9/21, SMA 50, Bollinger Bands, RSI, configurable EMA-crossover/RSI strategy tests, ATR-based stop/target simulation, chronological out-of-sample results, trade markers/log, equity curve, and CSV export. It does not connect to a broker or place orders.
+
+### Deploy the historical-price API
+
+GitHub Pages serves static files and cannot run the Python API itself. The repository includes a FastAPI read-only market-history service and a Render Blueprint:
+
+1. In Render, create a new Blueprint from this repository and approve the `render.yaml` service named `nanaforex-gold-tester-api`.
+2. Wait for deployment. Verify the service URL plus `/health` returns JSON with `"ok": true`.
+3. Open `site/config.js` in GitHub and replace the empty value with the Render HTTPS URL, for example:
+   ```js
+   window.NANA_API_BASE = "https://YOUR-SERVICE.onrender.com";
+   ```
+4. Commit the change. The existing GitHub Pages workflow deploys the updated `site/` directory automatically.
+
+The API fetches public historical candles for Yahoo Finance's `XAUUSD=X` symbol, normalizes OHLCV values, returns UTC timestamps, validates candle consistency, and caches successful responses briefly. No API key, account, sign-in, or broker credentials are required. The provider may impose availability, delay, retention, and rate limits; the API fails visibly rather than fabricating market candles. Render free services may sleep when idle, so the first request after inactivity can take longer.
+
+### Timeframe and data limitations
+
+Yahoo Finance commonly limits intraday history more tightly than daily/weekly history. The API rejects unsupported long intraday ranges rather than pretending the requested history was returned. Broker-exported candles are still preferred for realistic XAUUSD scalping research. Confirm symbol suffix, spread, slippage, commission, contract size and tick value for the broker you use.
+
+### Public API endpoints
+
+- `GET /health` — service health.
+- `GET /api/candles?symbol=XAUUSD&interval=5m&range=1mo` — normalized historical OHLCV candles.
+- Supported intervals: `1m`, `5m`, `15m`, `30m`, `1h`, `1d`, `1wk`; range constraints are enforced by the API.
+
+This is a historical research and education tool. Results are approximate bar simulations, not forecasts or guaranteed performance. No live trading is enabled.
