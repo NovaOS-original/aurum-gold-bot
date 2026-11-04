@@ -117,7 +117,7 @@ function refreshOverlays(){
 }
 async function loadHistory(){
  const period=$('period').value,interval=$('interval').value;
- stopReplay();replaySource=[];replayTrade=null;replayMode=false;if($('replayStatus'))$('replayStatus').textContent='Loading a new historical dataset…';
+ stopReplay();replaySource=[];replayTrade=null;replayMode=false;if($('replayStatus'))$('replayStatus').textContent='Loading a new historical dataset…';['replayPlay','replayPause','replayStep','replayReset','placeSetup','cancelSetup','useReplayPrice'].forEach(id=>$(id).disabled=true);
  candles=[];lastResult=null;$('run').disabled=true;$('datasetInfo').textContent='No candles loaded';$('lastPrice').textContent='—';$('ohlc').textContent='Open — · High — · Low — · Close —';$('indicatorRows').innerHTML='';$('tradeRows').innerHTML='<tr><td colspan="7" class="muted">Load history, then run a backtest.</td></tr>';$('net').textContent='—';$('win').textContent='—';$('trades').textContent='—';$('pf').textContent='—';$('dd').textContent='—';$('endBal').textContent='—';$('avg').textContent='—';$('testBars').textContent='—';
  if(candleSeries){candleSeries.priceLines=[];candleSeries.setMarkers([]);candleSeries.setData([]);}if(lineSeries)lineSeries.setData([]);if(equitySeries)equitySeries.setData([]);refreshOverlays();
  $('load').disabled=true;$('apiState').textContent='● FETCHING HISTORICAL DATA';$('dataLabel').textContent='Fetching XAUUSD history from free XAUS API…';
@@ -208,13 +208,13 @@ function updateReplayFrame(){
  renderReplayTrade();
 }
 function renderReplayTrade(){
- if(!replayTrade){$('setupStatus').innerHTML='No setup placed. Choose BUY or SELL and define Entry, SL and TP.';$('cancelSetup').disabled=true;candleSeries.priceLines=[];candleSeries.setMarkers([]);return;}
+ if(!replayTrade){$('setupStatus').innerHTML='No setup placed. Choose BUY or SELL and define Entry, SL and TP.';$('cancelSetup').disabled=true;candleSeries.priceLines=[];lineSeries.priceLines=[];candleSeries.setMarkers([]);return;}
  const t=replayTrade,dir=t.side==='BUY'?1:-1,price=candles[candles.length-1]?.close,move=price==null?0:(price-t.entry)*dir;
  const stateText=t.status==='PENDING'?'PENDING ENTRY':t.status==='OPEN'?'OPEN · WAITING FOR TP / SL':t.status==='TP'?'TAKE PROFIT HIT':t.status==='SL'?'STOP LOSS HIT':t.status;
  const result=t.status==='OPEN'?' · Floating move '+(move>=0?'+':'')+fmt(move)+' price units':t.status==='TP'?' · Result +'+fmt(Math.abs(t.target-t.entry))+' price units':t.status==='SL'?' · Result -'+fmt(Math.abs(t.entry-t.stop))+' price units':'';
  $('setupStatus').innerHTML='<strong>'+stateText+'</strong><br>'+t.side+' · Entry '+fmt(t.entry)+' · SL '+fmt(t.stop)+' · TP '+fmt(t.target)+result;
  $('cancelSetup').disabled=!['PENDING','OPEN'].includes(t.status);
- candleSeries.priceLines=[{price:t.entry,color:'#e8b85b',title:'ENTRY'},{price:t.stop,color:'#e56572',title:'STOP'},{price:t.target,color:'#35bd8b',title:'TARGET'}];
+ const levels=[{price:t.entry,color:'#e8b85b',title:'ENTRY'},{price:t.stop,color:'#e56572',title:'STOP'},{price:t.target,color:'#35bd8b',title:'TARGET'}];candleSeries.priceLines=levels;lineSeries.priceLines=levels;
  candleSeries.setMarkers([{time:t.createdTime,position:t.side==='BUY'?'belowBar':'aboveBar',color:'#e8b85b',text:t.side+' SETUP'},...(t.entryTime?[{time:t.entryTime,position:t.side==='BUY'?'belowBar':'aboveBar',color:'#6caeff',text:'ENTRY FILLED'}]:[]),...(t.exitTime?[{time:t.exitTime,position:t.side==='BUY'?'aboveBar':'belowBar',color:t.status==='TP'?'#35bd8b':'#e56572',text:t.status==='TP'?'TP':'SL'}]:[])]);
 }
 function replayCheckCandle(c){
@@ -257,7 +257,7 @@ function useCurrentReplayPrice(){
 }
 function restoreFullHistory(){
  if(!replayMode||!replaySource.length)return;
- stopReplay();replayMode=false;candles=replaySource.slice();candleSeries.priceLines=[];candleSeries.setMarkers([]);candleSeries.setData(candles);lineSeries.setData(candles.map(c=>({time:c.time,value:c.close})));refreshOverlays();chart.timeScale().fitContent();
+ stopReplay();replayMode=false;candles=replaySource.slice();candleSeries.priceLines=[];lineSeries.priceLines=[];candleSeries.setMarkers([]);candleSeries.setData(candles);lineSeries.setData(candles.map(c=>({time:c.time,value:c.close})));refreshOverlays();chart.timeScale().fitContent();
 }
 
 function exportCSV(){const exportData=replaySource.length?replaySource:candles;if(!exportData.length)return;let rows=['time,open,high,low,close,volume',...exportData.map(c=>[new Date(c.time*1000).toISOString(),c.open,c.high,c.low,c.close,c.volume??''].join(','))];let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([rows.join('\n')],{type:'text/csv'}));a.download='nanaforex-xauusd-history.csv';a.click();URL.revokeObjectURL(a.href);}
