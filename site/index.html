@@ -100,6 +100,8 @@ function refreshOverlays(){
 }
 async function loadHistory(){
  const period=$('period').value,interval=$('interval').value;
+ candles=[];lastResult=null;$('run').disabled=true;$('datasetInfo').textContent='No candles loaded';$('tradeRows').innerHTML='<tr><td colspan="7" class="muted">Load history, then run a backtest.</td></tr>';$('net').textContent='—';$('win').textContent='—';$('trades').textContent='—';$('pf').textContent='—';$('dd').textContent='—';$('endBal').textContent='—';$('avg').textContent='—';$('testBars').textContent='—';
+ if(candleSeries)candleSeries.setData([]);if(lineSeries)lineSeries.setData([]);if(equitySeries)equitySeries.setData([]);refreshOverlays();
  $('load').disabled=true;$('apiState').textContent='● FETCHING HISTORICAL DATA';$('dataLabel').textContent='Fetching XAUUSD history from free XAUS API…';
  try{
   let j=null,provider='XAUS Gold Data API';
@@ -133,10 +135,10 @@ async function loadHistory(){
   const updated=j.updated_at?' · updated '+new Date(j.updated_at).toISOString().replace('T',' ').slice(0,16)+' UTC':'';
   $('dataLabel').textContent=(j.source||provider)+' · '+candles.length.toLocaleString()+' candles · '+new Date(candles[0].time*1000).toISOString().slice(0,10)+' to '+new Date(candles.at(-1).time*1000).toISOString().slice(0,10)+freshness+updated;
   $('datasetInfo').textContent=candles.length.toLocaleString()+' '+interval+' candles · '+period+' · '+(j.source||provider);
-  $('apiState').textContent=state==='stale'?'● STALE DATA': '● HISTORY LOADED';
+  $('run').disabled=false;$('apiState').textContent=state==='stale'?'● STALE DATA': '● HISTORY LOADED';
   $('runStatus').textContent=state==='stale'?'Historical data loaded, but the provider marks it stale. Check the candle dates before testing.':'Historical data ready. Configure your strategy and run a test.';
   $('tradeRows').innerHTML='<tr><td colspan="7" class="muted">Run a backtest to populate the trade log.</td></tr>';lastResult=null;
- }catch(e){$('apiState').textContent='● DATA UNAVAILABLE';$('dataLabel').textContent=e.message;$('runStatus').textContent=e.message;}
+ }catch(e){$('run').disabled=true;$('apiState').textContent='● DATA UNAVAILABLE';$('dataLabel').textContent=e.message;$('runStatus').textContent=e.message;}
  finally{$('load').disabled=false;}
 }
 function runBacktest(){
