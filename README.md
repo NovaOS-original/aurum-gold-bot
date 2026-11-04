@@ -116,6 +116,8 @@ No order adapter is present. Keep development demo-first. Synthetic fixtures are
 
 The GitHub Pages front end is now branded **NanaForex Gold Tester**. It is designed for public use without sign-in and provides historical XAUUSD candles, candlestick/line charts, EMA 9/21, SMA 50, Bollinger Bands, RSI, configurable EMA-crossover/RSI strategy tests, ATR-based stop/target simulation, chronological out-of-sample results, trade markers/log, equity curve, and CSV export. It does not connect to a broker or place orders.
 
+**Primary free history source:** [misix-git/xaus-api](https://github.com/misix-git/xaus-api), using `https://xaus.com/api/v1/chart?symbol=xau&range=1y&interval=1d`. It is keyless and documents open CORS, OHLCV candles and freshness metadata. The website now requests this source directly from the browser, so the Render API is no longer required for the primary historical-data path. If XAUS is unavailable and a Render API URL is configured, the app falls back to the NanaForex API. Provider coverage and upstream availability can change; the app validates candle values and reports failures instead of inventing data. XAUS asks for attribution, which is displayed in the chart source label.
+
 ### Deploy the historical-price API
 
 **Important current setup state:** the frontend API URL is intentionally blank until the Render backend has actually been created. Without this one-time deployment and URL configuration, GitHub Pages cannot fetch market candles; it is a static host and cannot run Python itself.
