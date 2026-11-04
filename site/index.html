@@ -20,7 +20,7 @@
 <div class="layout"><section class="panel chartpanel">
 <div class="charthead"><div><div class="eyebrow">Selected historical candle</div><div class="price" id="lastPrice">—</div><div class="sub" id="ohlc">Open — · High — · Low — · Close —</div></div><div class="charttools"><button class="active" id="candlesBtn">Candles</button><button id="lineBtn">Line</button><button id="resetChart">Reset zoom</button></div></div>
 <div id="mainChart" class="chart"></div><div id="rsiChart" class="indicatorchart"></div>
-<div class="chartfoot"><span id="dataLabel">Waiting for historical candles…</span><span>Source: XAUS Gold Data API · XAUUSD · timestamps shown in UTC</span></div>
+<div class="chartfoot"><span id="dataLabel">Waiting for historical candles…</span><span id="sourceLabel">Source: XAUS Gold Data API · XAUUSD · timestamps shown in UTC</span></div>
 </section>
 <aside class="side">
 <section class="panel card"><h3>Chart indicators</h3><p class="sub">Toggle overlays and oscillator</p>
@@ -133,11 +133,11 @@ async function loadHistory(){
   const freshness=state==='stale'?' · PROVIDER STALE DATA':'';
   const updated=j.updated_at?' · updated '+new Date(j.updated_at).toISOString().replace('T',' ').slice(0,16)+' UTC':'';
   $('dataLabel').textContent=(j.source||provider)+' · '+candles.length.toLocaleString()+' candles · '+new Date(candles[0].time*1000).toISOString().slice(0,10)+' to '+new Date(candles.at(-1).time*1000).toISOString().slice(0,10)+freshness+updated;
-  $('datasetInfo').textContent=candles.length.toLocaleString()+' '+interval+' candles · '+period+' · '+(j.source||provider);
+  $('datasetInfo').textContent=candles.length.toLocaleString()+' '+interval+' candles · '+period+' · '+(j.source||provider);$('sourceLabel').textContent='Source: '+(j.source||provider)+' · XAUUSD · timestamps shown in UTC';
   $('run').disabled=false;$('apiState').textContent=state==='stale'?'● STALE DATA': '● HISTORY LOADED';
   $('runStatus').textContent=state==='stale'?'Historical data loaded, but the provider marks it stale. Check the candle dates before testing.':'Historical data ready. Configure your strategy and run a test.';
   $('tradeRows').innerHTML='<tr><td colspan="7" class="muted">Run a backtest to populate the trade log.</td></tr>';lastResult=null;
- }catch(e){$('run').disabled=true;$('apiState').textContent='● DATA UNAVAILABLE';$('dataLabel').textContent=e.message;$('runStatus').textContent=e.message;}
+ }catch(e){$('run').disabled=true;$('apiState').textContent='● DATA UNAVAILABLE';$('sourceLabel').textContent='Source unavailable · XAUUSD';$('dataLabel').textContent=e.message;$('runStatus').textContent=e.message;}
  finally{$('load').disabled=false;}
 }
 function runBacktest(){
