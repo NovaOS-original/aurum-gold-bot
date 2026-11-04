@@ -73,6 +73,14 @@ function refreshOverlays(){
 }
 async function loadHistory(){
  const period=$('period').value,interval=$('interval').value;
+ if(!API_BASE){
+  const msg='Market-history API is not connected yet. Deploy the Render service, then add its HTTPS URL to site/config.js.';
+  $('apiState').textContent='● API NOT CONFIGURED';
+  $('dataLabel').innerHTML=msg+' <a href="https://render.com/deploy?repo=https://github.com/NovaOS-original/aurum-gold-bot" target="_blank" rel="noopener noreferrer" style="color:var(--gold);text-decoration:underline">Deploy API on Render</a>';
+  $('runStatus').textContent=msg;
+  $('load').disabled=false;
+  return;
+ }
  $('load').disabled=true;$('apiState').textContent='● FETCHING HISTORICAL DATA';$('dataLabel').textContent='Fetching '+interval+' candles for '+period+'…';
  try{
   const url=API_BASE+'/api/candles?symbol=XAUUSD&interval='+encodeURIComponent(interval)+'&range='+encodeURIComponent(period);
