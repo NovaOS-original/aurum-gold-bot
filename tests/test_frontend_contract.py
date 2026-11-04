@@ -30,7 +30,7 @@ class FrontendContractTests(unittest.TestCase):
     def test_real_market_provider_is_explicit_and_no_fake_fallback(self):
         self.assertIn("https://xaus.com/api/v1/chart", self.script)
         self.assertIn("Free XAUS history service could not return enough real candles", self.script)
-        self.assertIn("NanaForex Gold Data API", self.script)
+        self.assertIn("XAUS Gold Data API", self.script)
 
     @unittest.skipUnless(shutil.which("node"), "Node.js is not installed")
     def test_inline_javascript_syntax(self):
