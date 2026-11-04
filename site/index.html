@@ -71,8 +71,6 @@ const visibleSeries=all.filter(s=>s.data.length);visibleSeries.forEach(s=>{const
  subscribeCrosshairMove(fn){this.onCrosshair=fn;}
 }
 const NanaCharts={createChart:(host,options)=>new NanaChart(host,options)};
-let candles=[],chart,candleSeries,lineSeries,emaFastSeries,emaSlowSeries,smaSeries,bbUpper,bbLower,rsiChart,rsiSeries,equityChart,equitySeries,lastResult=null;
-const $=id=>document.getElementById(id),fmt=(n,d=2)=>Number(n).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d});
 function initCharts(){
  const common={layout:{background:{type:'solid',color:'#0f1721'},textColor:'#9aaabd'}};
  chart=NanaCharts.createChart($('mainChart'),{...common});
