@@ -20,7 +20,7 @@
 <div class="layout"><section class="panel chartpanel">
 <div class="charthead"><div><div class="eyebrow">Selected historical candle</div><div class="price" id="lastPrice">—</div><div class="sub" id="ohlc">Open — · High — · Low — · Close —</div></div><div class="charttools"><button class="active" id="candlesBtn">Candles</button><button id="lineBtn">Line</button><button id="resetChart">Reset zoom</button></div></div>
 <div id="mainChart" class="chart"></div><div id="rsiChart" class="indicatorchart"></div>
-<div class="chartfoot"><span id="dataLabel">Waiting for historical candles…</span><span>Source: Yahoo Finance · XAUUSD=X · timestamps shown in UTC</span></div>
+<div class="chartfoot"><span id="dataLabel">Waiting for historical candles…</span><span>Source: XAUS Gold Data API · XAUUSD · timestamps shown in UTC</span></div>
 </section>
 <aside class="side">
 <section class="panel card"><h3>Chart indicators</h3><p class="sub">Toggle overlays and oscillator</p>
@@ -73,23 +73,41 @@ function refreshOverlays(){
 }
 async function loadHistory(){
  const period=$('period').value,interval=$('interval').value;
- if(!API_BASE){
-  const msg='Market-history API is not connected yet. Deploy the Render service, then add its HTTPS URL to site/config.js.';
-  $('apiState').textContent='● API NOT CONFIGURED';
-  $('dataLabel').innerHTML=msg+' <a href="https://render.com/deploy?repo=https://github.com/NovaOS-original/aurum-gold-bot" target="_blank" rel="noopener noreferrer" style="color:var(--gold);text-decoration:underline">Deploy API on Render</a>';
-  $('runStatus').textContent=msg;
-  $('load').disabled=false;
-  return;
- }
- $('load').disabled=true;$('apiState').textContent='● FETCHING HISTORICAL DATA';$('dataLabel').textContent='Fetching '+interval+' candles for '+period+'…';
+ $('load').disabled=true;$('apiState').textContent='● FETCHING HISTORICAL DATA';$('dataLabel').textContent='Fetching XAUUSD history from free XAUS API…';
  try{
-  const url=API_BASE+'/api/candles?symbol=XAUUSD&interval='+encodeURIComponent(interval)+'&range='+encodeURIComponent(period);
-  const res=await fetch(url,{headers:{Accept:'application/json'},cache:'no-store'});if(!res.ok){let j=await res.json().catch(()=>({}));throw Error(j.detail||'API request failed: '+res.status);}
-  const j=await res.json();candles=(j.candles||[]).filter(c=>Number.isFinite(c.open)&&Number.isFinite(c.high)&&Number.isFinite(c.low)&&Number.isFinite(c.close)).sort((a,b)=>a.time-b.time);
+  let j=null,provider='XAUS Gold Data API';
+  const xaInterval=interval==='1h'?'1h':interval;
+  const xaUrl='https://xaus.com/api/v1/chart?symbol=xau&range='+encodeURIComponent(period)+'&interval='+encodeURIComponent(xaInterval);
+  let xaError=null;
+  try{
+   const res=await fetch(xaUrl,{headers:{Accept:'application/json'},cache:'no-store'});
+   if(!res.ok)throw Error('XAUS API returned HTTP '+res.status);
+   const raw=await res.json();
+   const pts=raw.points||raw.candles||raw.data||raw.results||[];
+   const normalized=pts.map(p=>({
+    time:Math.floor(Number(p.t??p.time??p.timestamp??(p.date?Date.parse(p.date)/1000:NaN))),
+    open:Number(p.o??p.open),high:Number(p.h??p.high),low:Number(p.l??p.low),close:Number(p.c??p.close),volume:Number(p.v??p.volume??0)
+   })).filter(c=>Number.isFinite(c.time)&&Number.isFinite(c.open)&&Number.isFinite(c.high)&&Number.isFinite(c.low)&&Number.isFinite(c.close)&&c.open>0&&c.high>=Math.max(c.open,c.close,c.low)&&c.low<=Math.min(c.open,c.close,c.high)).sort((a,b)=>a.time-b.time);
+   if(normalized.length<30)throw Error('XAUS returned only '+normalized.length+' valid candles for this selection.');
+   j={candles:normalized,source:'XAUS Gold Data API',data_state:raw.data_state||null,updated_at:raw.updated_at||null};
+  }catch(err){xaError=err;}
+  if(!j&&API_BASE){
+   provider='NanaForex API (Yahoo Finance fallback)';
+   const res=await fetch(API_BASE+'/api/candles?symbol=XAUUSD&interval='+encodeURIComponent(interval)+'&range='+encodeURIComponent(period),{headers:{Accept:'application/json'},cache:'no-store'});
+   if(!res.ok){let x=await res.json().catch(()=>({}));throw Error('XAUS: '+(xaError?.message||'unavailable')+'; fallback: '+(x.detail||res.status));}
+   j=await res.json();
+  }
+  if(!j)throw Error('Free XAUS history service could not return enough real candles. '+(xaError?.message||'Unknown provider error')+'. Try another timeframe or history range.');
+  candles=(j.candles||[]).filter(c=>Number.isFinite(c.open)&&Number.isFinite(c.high)&&Number.isFinite(c.low)&&Number.isFinite(c.close)).sort((a,b)=>a.time-b.time);
   if(candles.length<30)throw Error('Provider returned only '+candles.length+' candles. Try a larger period or a slower timeframe.');
   candleSeries.setData(candles);lineSeries.setData(candles.map(c=>({time:c.time,value:c.close})));refreshOverlays();chart.timeScale().fitContent();rsiChart.timeScale().fitContent();
-  $('dataLabel').textContent=j.source+' · '+candles.length.toLocaleString()+' candles · '+new Date(candles[0].time*1000).toISOString().slice(0,10)+' to '+new Date(candles.at(-1).time*1000).toISOString().slice(0,10);
-  $('datasetInfo').textContent=candles.length.toLocaleString()+' '+interval+' candles · '+period+' · '+j.source;$('apiState').textContent='● HISTORY LOADED';$('runStatus').textContent='Historical data ready. Configure your strategy and run a test.';
+  const state=j.data_state?.status;
+  const freshness=state==='stale'?' · PROVIDER STALE DATA':'';
+  const updated=j.updated_at?' · updated '+new Date(j.updated_at).toISOString().replace('T',' ').slice(0,16)+' UTC':'';
+  $('dataLabel').textContent=(j.source||provider)+' · '+candles.length.toLocaleString()+' candles · '+new Date(candles[0].time*1000).toISOString().slice(0,10)+' to '+new Date(candles.at(-1).time*1000).toISOString().slice(0,10)+freshness+updated;
+  $('datasetInfo').textContent=candles.length.toLocaleString()+' '+interval+' candles · '+period+' · '+(j.source||provider);
+  $('apiState').textContent=state==='stale'?'● STALE DATA': '● HISTORY LOADED';
+  $('runStatus').textContent=state==='stale'?'Historical data loaded, but the provider marks it stale. Check the candle dates before testing.':'Historical data ready. Configure your strategy and run a test.';
   $('tradeRows').innerHTML='<tr><td colspan="7" class="muted">Run a backtest to populate the trade log.</td></tr>';lastResult=null;
  }catch(e){$('apiState').textContent='● DATA UNAVAILABLE';$('dataLabel').textContent=e.message;$('runStatus').textContent=e.message;}
  finally{$('load').disabled=false;}
