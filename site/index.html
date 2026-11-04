@@ -91,7 +91,7 @@ function rsi(vals,n=14){let out=Array(vals.length).fill(null),g=0,l=0;if(vals.le
 function atr(n=14){let tr=candles.map((c,i)=>i?Math.max(c.high-c.low,Math.abs(c.high-candles[i-1].close),Math.abs(c.low-candles[i-1].close)):c.high-c.low);return ema(tr,n);}
 function refreshOverlays(){
  if(!chart)return;
- if(!candles.length){[emaFastSeries,emaSlowSeries,smaSeries,bbUpper,bbLower,rsiSeries].forEach(s=>s?.setData([]));return;}let closes=candles.map(c=>c.close),fast=ema(closes,+$('fast').value||9),slow=ema(closes,+$('slow').value||21),r=rsi(closes),s=sma(closes,50);
+ if(!candles.length){[emaFastSeries,emaSlowSeries,smaSeries,bbUpper,bbLower,rsiSeries].forEach(s=>s?.setData([]));return;}let closes=candles.map(c=>c.close),r=rsi(closes),s=sma(closes,50);
  emaFastSeries.setData($('ema9').checked?ema(closes,9):[]);emaSlowSeries.setData($('ema21').checked?ema(closes,21):[]);smaSeries.setData($('sma50').checked?s:[]);
  let upper=[],lower=[];for(let i=19;i<closes.length;i++){let a=closes.slice(i-19,i+1),m=a.reduce((x,y)=>x+y,0)/20,sd=Math.sqrt(a.reduce((x,y)=>x+(y-m)**2,0)/20);upper.push({time:candles[i].time,value:m+2*sd});lower.push({time:candles[i].time,value:m-2*sd});}bbUpper.setData($('bb').checked?upper:[]);bbLower.setData($('bb').checked?lower:[]);
  rsiSeries.setData($('rsiToggle').checked?r.map((x,i)=>({time:candles[i].time,value:x?.value??NaN})):[]);
@@ -99,7 +99,7 @@ function refreshOverlays(){
 }
 async function loadHistory(){
  const period=$('period').value,interval=$('interval').value;
- candles=[];lastResult=null;$('run').disabled=true;$('datasetInfo').textContent='No candles loaded';$('tradeRows').innerHTML='<tr><td colspan="7" class="muted">Load history, then run a backtest.</td></tr>';$('net').textContent='—';$('win').textContent='—';$('trades').textContent='—';$('pf').textContent='—';$('dd').textContent='—';$('endBal').textContent='—';$('avg').textContent='—';$('testBars').textContent='—';
+ candles=[];lastResult=null;$('run').disabled=true;$('datasetInfo').textContent='No candles loaded';$('lastPrice').textContent='—';$('ohlc').textContent='Open — · High — · Low — · Close —';$('indicatorRows').innerHTML='';$('tradeRows').innerHTML='<tr><td colspan="7" class="muted">Load history, then run a backtest.</td></tr>';$('net').textContent='—';$('win').textContent='—';$('trades').textContent='—';$('pf').textContent='—';$('dd').textContent='—';$('endBal').textContent='—';$('avg').textContent='—';$('testBars').textContent='—';
  if(candleSeries)candleSeries.setData([]);if(lineSeries)lineSeries.setData([]);if(equitySeries)equitySeries.setData([]);refreshOverlays();
  $('load').disabled=true;$('apiState').textContent='● FETCHING HISTORICAL DATA';$('dataLabel').textContent='Fetching XAUUSD history from free XAUS API…';
  try{
@@ -163,7 +163,7 @@ function runBacktest(){
  $('runStatus').textContent='Backtest complete · '+trades.length+' trades · '+testCount+' holdout candles. Earlier history used for indicator warm-up only.';
 }
 function exportCSV(){if(!candles.length)return;let rows=['time,open,high,low,close,volume',...candles.map(c=>[new Date(c.time*1000).toISOString(),c.open,c.high,c.low,c.close,c.volume??''].join(','))];let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([rows.join('\n')],{type:'text/csv'}));a.download='nanaforex-xauusd-history.csv';a.click();URL.revokeObjectURL(a.href);}
-$('load').onclick=loadHistory;$('run').onclick=runBacktest;$('fit').onclick=()=>chart?.timeScale().fitContent();$('resetChart').onclick=()=>chart?.timeScale().fitContent();$('export').onclick=exportCSV;
+$('load').onclick=loadHistory;$('run').onclick=()=>{try{runBacktest();}catch(e){$('runStatus').textContent='Backtest error: '+e.message;}};$('fit').onclick=()=>chart?.timeScale().fitContent();$('resetChart').onclick=()=>chart?.timeScale().fitContent();$('export').onclick=exportCSV;
 $('candlesBtn').onclick=()=>{candleSeries.applyOptions({visible:true});lineSeries.applyOptions({visible:false});$('candlesBtn').classList.add('active');$('lineBtn').classList.remove('active')};$('lineBtn').onclick=()=>{candleSeries.applyOptions({visible:false});lineSeries.applyOptions({visible:true});$('lineBtn').classList.add('active');$('candlesBtn').classList.remove('active')};
 ['ema9','ema21','sma50','bb','rsiToggle'].forEach(id=>$(id).onchange=refreshOverlays);
 document.querySelectorAll('[data-pane]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-pane]').forEach(x=>x.classList.toggle('active',x===b));$('tradePane').classList.toggle('hidden',b.dataset.pane!=='tradePane');$('indicatorPane').classList.toggle('hidden',b.dataset.pane!=='indicatorPane')});
