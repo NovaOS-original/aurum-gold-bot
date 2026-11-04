@@ -116,7 +116,7 @@ async function loadHistory(){
     time:Math.floor(Number(p.t??p.time??p.timestamp??(p.date?Date.parse(p.date)/1000:NaN))),
     open:Number(p.o??p.open),high:Number(p.h??p.high),low:Number(p.l??p.low),close:Number(p.c??p.close),volume:Number(p.v??p.volume??0)
    })).filter(c=>Number.isFinite(c.time)&&Number.isFinite(c.open)&&Number.isFinite(c.high)&&Number.isFinite(c.low)&&Number.isFinite(c.close)&&c.open>0&&c.high>=Math.max(c.open,c.close,c.low)&&c.low<=Math.min(c.open,c.close,c.high)).sort((a,b)=>a.time-b.time);
-   if(normalized.length<30)throw Error('XAUS returned only '+normalized.length+' valid candles for this selection.');
+   if(normalized.length<2)throw Error('XAUS returned fewer than 2 valid candles for this selection.');
    j={candles:normalized,source:'XAUS Gold Data API',data_state:raw.data_state||null,updated_at:raw.updated_at||null};
   }catch(err){xaError=err;}
   if(!j&&API_BASE){
@@ -127,15 +127,15 @@ async function loadHistory(){
   }
   if(!j)throw Error('Free XAUS history service could not return enough real candles. '+(xaError?.message||'Unknown provider error')+'. Try another timeframe or history range.');
   candles=(j.candles||[]).filter(c=>Number.isFinite(Number(c.time))&&Number.isFinite(Number(c.open))&&Number.isFinite(Number(c.high))&&Number.isFinite(Number(c.low))&&Number.isFinite(Number(c.close))&&Number(c.open)>0&&Number(c.high)>=Math.max(Number(c.open),Number(c.close),Number(c.low))&&Number(c.low)<=Math.min(Number(c.open),Number(c.close),Number(c.high))).map(c=>({...c,time:Number(c.time),open:Number(c.open),high:Number(c.high),low:Number(c.low),close:Number(c.close),volume:Number(c.volume)||0})).sort((a,b)=>a.time-b.time).filter((c,i,a)=>i===0||c.time>a[i-1].time);
-  if(candles.length<30)throw Error('Provider returned only '+candles.length+' candles. Try a larger period or a slower timeframe.');
+  if(candles.length<2)throw Error('Provider returned fewer than 2 valid candles. Try another range or timeframe.');
   candleSeries.setData(candles);lineSeries.setData(candles.map(c=>({time:c.time,value:c.close})));refreshOverlays();chart.timeScale().fitContent();rsiChart.timeScale().setVisibleLogicalRange({from:Math.max(0,candles.length-180),to:candles.length-1});
   const state=j.data_state?.status;
   const freshness=state==='stale'?' · PROVIDER STALE DATA':'';
   const updated=j.updated_at?' · updated '+new Date(j.updated_at).toISOString().replace('T',' ').slice(0,16)+' UTC':'';
   $('dataLabel').textContent=(j.source||provider)+' · '+candles.length.toLocaleString()+' candles · '+new Date(candles[0].time*1000).toISOString().slice(0,10)+' to '+new Date(candles.at(-1).time*1000).toISOString().slice(0,10)+freshness+updated;
   $('datasetInfo').textContent=candles.length.toLocaleString()+' '+interval+' candles · '+period+' · '+(j.source||provider);$('sourceLabel').textContent='Source: '+(j.source||provider)+' · XAUUSD · timestamps shown in UTC';
-  $('run').disabled=false;$('apiState').textContent=state==='stale'?'● STALE DATA': '● HISTORY LOADED';
-  $('runStatus').textContent=state==='stale'?'Historical data loaded, but the provider marks it stale. Check the candle dates before testing.':'Historical data ready. Configure your strategy and run a test.';
+  $('run').disabled=candles.length<100;$('apiState').textContent=state==='stale'?'● STALE DATA': '● HISTORY LOADED';
+  $('runStatus').textContent=state==='stale'?'Historical data loaded, but the provider marks it stale. Check the candle dates before testing.':candles.length<100?'History loaded. At least 100 candles are needed to run a strategy test; choose a longer range or faster timeframe.':'Historical data ready. Configure your strategy and run a test.';
   $('tradeRows').innerHTML='<tr><td colspan="7" class="muted">Run a backtest to populate the trade log.</td></tr>';lastResult=null;
  }catch(e){$('run').disabled=true;$('apiState').textContent='● DATA UNAVAILABLE';$('sourceLabel').textContent='Source unavailable · XAUUSD';$('dataLabel').textContent=e.message;$('runStatus').textContent=e.message;}
  finally{$('load').disabled=false;}
