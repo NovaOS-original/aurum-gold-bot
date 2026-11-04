@@ -21,10 +21,10 @@ class FrontendContractTests(unittest.TestCase):
         self.assertNotIn("lightweight-charts", lowered)
         self.assertNotIn("tradingview", lowered)
         for token in ("class NanaChart", "function loadHistory", "function refreshOverlays",
-                      "function runBacktest", "function exportCSV"):
+                      "function runBacktest", "function exportCSV", "function replayAdvanceTo", "function replayCheckCandle", "function placeReplaySetup", "function prepareReplay"):
             self.assertIn(token, self.script)
         for element_id in ("mainChart", "rsiChart", "equityChart", "load", "run",
-                           "tradeRows", "indicatorRows", "sourceLabel", "export", "ema9", "ema21", "bb", "rsiToggle"):
+                           "tradeRows", "indicatorRows", "sourceLabel", "export", "replayProgress", "replayPlay", "replayStep", "replayReset", "setupSide", "setupEntry", "setupSL", "setupTP", "placeSetup", "cancelSetup", "ema9", "ema21", "bb", "rsiToggle"):
             self.assertIn(f'id="{element_id}"', self.html)
 
     def test_real_market_provider_is_explicit_and_no_fake_fallback(self):
