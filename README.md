@@ -118,6 +118,10 @@ The GitHub Pages front end is now branded **NanaForex Gold Tester**. It is desig
 
 ### Deploy the historical-price API
 
+**Important current setup state:** the frontend API URL is intentionally blank until the Render backend has actually been created. Without this one-time deployment and URL configuration, GitHub Pages cannot fetch market candles; it is a static host and cannot run Python itself.
+
+[Deploy the API Blueprint on Render](https://render.com/deploy?repo=https://github.com/NovaOS-original/aurum-gold-bot)
+
 GitHub Pages serves static files and cannot run the Python API itself. The repository includes a FastAPI read-only market-history service and a Render Blueprint:
 
 1. In Render, create a new Blueprint from this repository and approve the `render.yaml` service named `nanaforex-gold-tester-api`.
@@ -141,3 +145,7 @@ Yahoo Finance commonly limits intraday history more tightly than daily/weekly hi
 - Supported intervals: `1m`, `5m`, `15m`, `30m`, `1h`, `1d`, `1wk`; range constraints are enforced by the API.
 
 This is a historical research and education tool. Results are approximate bar simulations, not forecasts or guaranteed performance. No live trading is enabled.
+
+### Chart library attribution
+
+The chart currently uses TradingView Lightweight Charts. Its required attribution must remain visible while this library is used. To have a chart with no TradingView branding, the chart engine must be replaced with a different library or an original canvas renderer; simply hiding the attribution would violate the library's attribution terms.
