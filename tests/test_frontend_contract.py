@@ -29,6 +29,9 @@ class FrontendContractTests(unittest.TestCase):
 
     def test_real_market_provider_is_explicit_and_no_fake_fallback(self):
         self.assertIn("https://xaus.com/api/v1/chart", self.script)
+        self.assertIn("function fetchMarketData", self.script)
+        self.assertIn("const maxRange=interval", self.script)
+        self.assertIn("AbortController", self.script)
         self.assertIn("Free XAUS history service could not return enough real candles", self.script)
         self.assertIn("XAUS Gold Data API", self.script)
 
