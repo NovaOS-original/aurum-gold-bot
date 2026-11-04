@@ -67,11 +67,15 @@ if not candle_check.ok or not quote_check.ok:
 ```
 **Integration boundary:** these are tested utility functions, not yet wired into a continuously running MT5-to-dashboard service. The current exporter remains a one-shot CSV export. Do not treat the dashboard as a live feed until an authenticated bridge calls these checks and exposes health/last-update status.
 
-## Dashboard: select and run built-in history
+## Dashboard: select and run historical data
 
-On the GitHub Pages dashboard, open **Backtest data**, choose **Last 1 year**, **Last 2 years**, or **Last 5 years**, then tap **Load built-in history** and **Run historical backtest**. The dashboard requests real daily XAU/USD candles from Yahoo Finance in the browser; internet access and the provider allowing browser requests are required. If the provider blocks the request, use the Python command below on Windows to download the data, or upload a broker-exported CSV. The separate **Load synthetic test fixture** option is only for checking that the UI/backtest runs and is not real market history.
+The public GitHub Pages dashboard is **NanaForex Gold Tester**. Choose a history range and timeframe, then select **Load history**. The browser requests real XAUUSD OHLCV candles from the free, keyless XAUS endpoint and displays the source, candle count and UTC date range. If XAUS cannot provide enough valid candles, the dashboard reports the error; it does not silently replace real data with synthetic candles. A Render API URL can optionally be configured as a fallback.
 
-Daily Yahoo candles are not appropriate for evaluating a scalping strategy. Use MT5-exported M1/M5 demo-account candles with realistic spread, slippage and commission assumptions for that purpose. No orders are sent.
+After history loads, configure the EMA/RSI strategy and costs, then select **Run strategy backtest**. The final chronological holdout is scored; earlier candles are used only to warm up indicators. Results include net P/L, win rate, closed trades, profit factor, drawdown, ending balance, average trade, equity curve, trade log and indicator values. Candles can be exported as CSV.
+
+The chart is an original NanaForex canvas renderer with candle/line views, indicator overlays, crosshair values, wheel zoom and drag-to-pan. It does not load TradingView Lightweight Charts or display TradingView branding. The source attribution for XAUS market data remains visible.
+
+For realistic scalping research, use broker-exported M1/M5 demo-account candles where possible. Public-provider candles may differ from your broker's symbol, timezone, spread and execution. No orders are sent.
 
 ## One-command built-in historical candle backtest (new)
 
@@ -118,23 +122,18 @@ The GitHub Pages front end is now branded **NanaForex Gold Tester**. It is desig
 
 **Primary free history source:** [misix-git/xaus-api](https://github.com/misix-git/xaus-api), using `https://xaus.com/api/v1/chart?symbol=xau&range=1y&interval=1d`. It is keyless and documents open CORS, OHLCV candles and freshness metadata. The website now requests this source directly from the browser, so the Render API is no longer required for the primary historical-data path. If XAUS is unavailable and a Render API URL is configured, the app falls back to the NanaForex API. Provider coverage and upstream availability can change; the app validates candle values and reports failures instead of inventing data. XAUS asks for attribution, which is displayed in the chart source label.
 
-### Deploy the historical-price API
+### Optional historical-price API fallback
 
-**Important current setup state:** the frontend API URL is intentionally blank until the Render backend has actually been created. Without this one-time deployment and URL configuration, GitHub Pages cannot fetch market candles; it is a static host and cannot run Python itself.
+The primary dashboard history path calls the public XAUS API directly, so deploying the Render service is **not required** to load history. The repository also includes a FastAPI read-only market-history service and a Render Blueprint as an optional fallback:
 
 [Deploy the API Blueprint on Render](https://render.com/deploy?repo=https://github.com/NovaOS-original/aurum-gold-bot)
 
-GitHub Pages serves static files and cannot run the Python API itself. The repository includes a FastAPI read-only market-history service and a Render Blueprint:
+1. In Render, create a new Blueprint from this repository and approve the service named `nanaforex-gold-tester-api`.
+2. Wait for deployment and verify the service URL plus `/health` returns JSON with `"ok": true`.
+3. If you want the fallback, set `window.NANA_API_BASE` in `site/config.js` to the Render HTTPS service URL.
+4. Commit the change; GitHub Pages deploys the updated `site/` directory.
 
-1. In Render, create a new Blueprint from this repository and approve the `render.yaml` service named `nanaforex-gold-tester-api`.
-2. Wait for deployment. Verify the service URL plus `/health` returns JSON with `"ok": true`.
-3. Open `site/config.js` in GitHub and replace the empty value with the Render HTTPS URL, for example:
-   ```js
-   window.NANA_API_BASE = "https://YOUR-SERVICE.onrender.com";
-   ```
-4. Commit the change. The existing GitHub Pages workflow deploys the updated `site/` directory automatically.
-
-The API fetches public historical candles for Yahoo Finance's `XAUUSD=X` symbol, normalizes OHLCV values, returns UTC timestamps, validates candle consistency, and caches successful responses briefly. No API key, account, sign-in, or broker credentials are required. The provider may impose availability, delay, retention, and rate limits; the API fails visibly rather than fabricating market candles. Render free services may sleep when idle, so the first request after inactivity can take longer.
+The optional API returns normalized historical OHLCV candles and fails visibly when upstream data is unavailable. Keep provider limits in mind; a Render free service may sleep when idle.
 
 ### Timeframe and data limitations
 
@@ -148,6 +147,6 @@ Yahoo Finance commonly limits intraday history more tightly than daily/weekly hi
 
 This is a historical research and education tool. Results are approximate bar simulations, not forecasts or guaranteed performance. No live trading is enabled.
 
-### Chart library attribution
+### Chart renderer and data attribution
 
-The chart currently uses TradingView Lightweight Charts. Its required attribution must remain visible while this library is used. To have a chart with no TradingView branding, the chart engine must be replaced with a different library or an original canvas renderer; simply hiding the attribution would violate the library's attribution terms.
+The dashboard uses an original, in-repository NanaForex canvas chart renderer. It does not import TradingView Lightweight Charts or use TradingView branding. XAUS is the historical market-data provider, and its source is identified in the dashboard. Retain the XAUS data-source attribution when reusing the data service.
